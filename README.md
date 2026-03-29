@@ -111,6 +111,40 @@ git status 2>&1                → rtk git status 2>&1
 ssh myhost                     → ssh myhost -o StrictHostKeyChecking=no
 ```
 
+## Chaining hooks
+
+Most AI agents run multiple hooks for the same event in parallel, which means only one hook's result is applied. Use the `-c` flag to chain other hook scripts through rewriter so they run sequentially and all rewrites compose:
+
+```bash
+rewriter --claude -c "/path/to/rtk-rewrite.sh"
+rewriter --claude -c "/path/to/hook1.sh" -c "/path/to/hook2.sh"
+```
+
+Execution order:
+
+1. rewriter applies its own rules from `rules.toml`
+2. Each `-c` command runs in order, receiving the (possibly rewritten) hook JSON on stdin
+3. If a chain command outputs JSON with an updated command, it is used as input for the next chain
+4. The final result is returned in the agent's native protocol
+
+Chain commands receive the same JSON format as the agent's hook protocol, so existing hook scripts (e.g. rtk-rewrite.sh) work without modification.
+
+Example with Claude Code settings:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "/path/to/rewriter --claude -c /path/to/rtk-rewrite.sh"
+      }]
+    }]
+  }
+}
+```
+
 ## Supported agents
 
 | Agent | Hook protocol | Rewrite method |
