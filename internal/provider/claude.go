@@ -18,8 +18,9 @@ func (c *Claude) Scopes() ([]Scope, Scope) {
 }
 
 // RunHook handles Claude Code PreToolUse hook protocol.
+// See: https://docs.anthropic.com/en/docs/claude-code/hooks
 // Input:  {"tool_name":"Bash","tool_input":{"command":"..."}}
-// Output: {"permissionDecision":"allow","updatedInput":{"command":"..."}}
+// Output: {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"...","updatedInput":{"command":"..."}}}
 func (c *Claude) RunHook(rs *rules.RuleSet) {
 	data := readStdin()
 
@@ -44,8 +45,12 @@ func (c *Claude) RunHook(rs *rules.RuleSet) {
 	}
 
 	writeJSON(map[string]any{
-		"permissionDecision": "allow",
-		"updatedInput":       map[string]string{"command": rewritten},
+		"hookSpecificOutput": map[string]any{
+			"hookEventName":           "PreToolUse",
+			"permissionDecision":       "allow",
+			"permissionDecisionReason": "rewriter auto-rewrite",
+			"updatedInput":             map[string]string{"command": rewritten},
+		},
 	})
 }
 
