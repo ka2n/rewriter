@@ -75,8 +75,8 @@ subcommand = "compose"
 replace = "podman compose"
 
 [[rules]]
-command = "cat"
-replace = "bat"
+command = "codex"
+replace = "jai codex"
 
 [[rules]]
 command = "ssh"
@@ -106,6 +106,7 @@ git status                     → rtk git status
 git status && cargo test       → rtk git status && cargo test
 RUST_LOG=debug git push        → RUST_LOG=debug rtk git push
 docker compose up -d           → podman compose up -d
+codex review main.go           → jai codex review main.go
 git status 2>&1                → rtk git status 2>&1
 ssh myhost                     → ssh myhost -o StrictHostKeyChecking=no
 ```
