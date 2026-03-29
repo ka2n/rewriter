@@ -18,6 +18,7 @@ func (c *Cursor) Scopes() ([]Scope, Scope) {
 }
 
 // RunHook handles Cursor beforeShellExecution hook protocol.
+// See: https://cursor.com/docs/hooks
 // Input:  {"hook_event_name":"beforeShellExecution","command":"...","cwd":"..."}
 // Output: {"permission":"allow","updated_input":{"command":"..."}}
 func (c *Cursor) RunHook(rs *rules.RuleSet) {

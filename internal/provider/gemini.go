@@ -18,6 +18,7 @@ func (g *Gemini) Scopes() ([]Scope, Scope) {
 }
 
 // RunHook handles Gemini CLI BeforeTool hook protocol.
+// See: https://geminicli.com/docs/hooks/reference/
 // Input:  {"tool_name":"run_shell_command","tool_input":{"command":"..."}}
 // Output: {"decision":"allow","hookSpecificOutput":{"tool_input":{"command":"..."}}}
 func (g *Gemini) RunHook(rs *rules.RuleSet) {
