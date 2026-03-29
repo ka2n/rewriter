@@ -18,8 +18,9 @@ func (c *Copilot) Scopes() ([]Scope, Scope) {
 }
 
 // RunHook handles GitHub Copilot (VS Code) PreToolUse hook protocol.
+// See: https://code.visualstudio.com/docs/copilot/customization/hooks
 // Input:  {"tool_name":"runTerminalCommand","tool_input":{"command":"..."}}
-// Output: {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"command":"..."}}}
+// Output: {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"...","updatedInput":{"command":"..."}}}
 func (c *Copilot) RunHook(rs *rules.RuleSet) {
 	data := readStdin()
 
@@ -50,9 +51,10 @@ func (c *Copilot) RunHook(rs *rules.RuleSet) {
 
 	writeJSON(map[string]any{
 		"hookSpecificOutput": map[string]any{
-			"hookEventName":      "PreToolUse",
-			"permissionDecision": "allow",
-			"updatedInput":       map[string]string{"command": rewritten},
+			"hookEventName":           "PreToolUse",
+			"permissionDecision":       "allow",
+			"permissionDecisionReason": "rewriter auto-rewrite",
+			"updatedInput":             map[string]string{"command": rewritten},
 		},
 	})
 }
