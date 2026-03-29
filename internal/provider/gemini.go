@@ -21,7 +21,7 @@ func (g *Gemini) Scopes() ([]Scope, Scope) {
 // See: https://geminicli.com/docs/hooks/reference/
 // Input:  {"tool_name":"run_shell_command","tool_input":{"command":"..."}}
 // Output: {"decision":"allow","hookSpecificOutput":{"tool_input":{"command":"..."}}}
-func (g *Gemini) RunHook(rs *rules.RuleSet) {
+func (g *Gemini) RunHook(rs *rules.RuleSet, chains []string) {
 	data := readStdin()
 
 	var input struct {
@@ -39,7 +39,19 @@ func (g *Gemini) RunHook(rs *rules.RuleSet) {
 		exitSilent()
 	}
 
-	rewritten, changed := tryRewrite(input.ToolInput.Command, rs)
+	command := input.ToolInput.Command
+	changed := false
+
+	if rewritten, ok := tryRewrite(command, rs); ok {
+		command = rewritten
+		changed = true
+	}
+
+	if chainCmd, ok := runChains(chains, data, command, geminiExtractCommand, claudeBuildInput); ok {
+		command = chainCmd
+		changed = true
+	}
+
 	if !changed {
 		exitSilent()
 	}
@@ -47,9 +59,23 @@ func (g *Gemini) RunHook(rs *rules.RuleSet) {
 	writeJSON(map[string]any{
 		"decision": "allow",
 		"hookSpecificOutput": map[string]any{
-			"tool_input": map[string]string{"command": rewritten},
+			"tool_input": map[string]string{"command": command},
 		},
 	})
+}
+
+func geminiExtractCommand(output []byte) (string, bool) {
+	var resp struct {
+		HookSpecificOutput struct {
+			ToolInput struct {
+				Command string `json:"command"`
+			} `json:"tool_input"`
+		} `json:"hookSpecificOutput"`
+	}
+	if json.Unmarshal(output, &resp) == nil && resp.HookSpecificOutput.ToolInput.Command != "" {
+		return resp.HookSpecificOutput.ToolInput.Command, true
+	}
+	return "", false
 }
 
 func (g *Gemini) Init(rewriterPath string, scope Scope) error {

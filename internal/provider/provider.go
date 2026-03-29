@@ -2,10 +2,12 @@
 package provider
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/ka2n/rewriter/internal/rewrite"
@@ -31,7 +33,9 @@ type Provider interface {
 
 	// RunHook reads JSON from stdin, rewrites commands, and writes the
 	// agent-specific JSON response to stdout.
-	RunHook(rs *rules.RuleSet)
+	// chains are additional hook commands to execute sequentially after
+	// the rewriter's own rules are applied.
+	RunHook(rs *rules.RuleSet, chains []string)
 
 	// Init patches the agent's settings file to register the rewriter hook.
 	Init(rewriterPath string, scope Scope) error
@@ -94,4 +98,51 @@ func writeJSON(v any) {
 
 func exitSilent() {
 	os.Exit(0)
+}
+
+// runChains executes chain commands sequentially, passing inputJSON (with command
+// updated) to each. extractCommand is a provider-specific function that extracts
+// the updated command from a chain's JSON output. buildInput rebuilds the input
+// JSON with the updated command for the next chain.
+// Returns the final command and whether any chain changed it.
+func runChains(chains []string, originalInput []byte, command string, extractCommand func(output []byte) (string, bool), buildInput func(input []byte, command string) []byte) (string, bool) {
+	if len(chains) == 0 {
+		return command, false
+	}
+
+	changed := false
+	currentInput := buildInput(originalInput, command)
+
+	for _, chainCmd := range chains {
+		out, err := execChain(chainCmd, currentInput)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "rewriter: chain %q error: %v\n", chainCmd, err)
+			continue
+		}
+		if len(bytes.TrimSpace(out)) == 0 {
+			continue
+		}
+
+		if cmd, ok := extractCommand(out); ok {
+			command = cmd
+			changed = true
+			currentInput = buildInput(originalInput, command)
+		}
+	}
+
+	return command, changed
+}
+
+func execChain(command string, input []byte) ([]byte, error) {
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Stdin = bytes.NewReader(input)
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() != 0 {
+			return nil, nil // non-zero exit = skip
+		}
+		return nil, err
+	}
+	return out, nil
 }

@@ -12,12 +12,23 @@ import (
 	"github.com/ka2n/rewriter/internal/rules"
 )
 
+// chainFlags collects multiple -c flag values.
+type chainFlags []string
+
+func (c *chainFlags) String() string { return strings.Join(*c, ", ") }
+func (c *chainFlags) Set(v string) error {
+	*c = append(*c, v)
+	return nil
+}
+
 func main() {
 	claude := flag.Bool("claude", false, "Claude Code hook mode")
 	copilot := flag.Bool("copilot", false, "GitHub Copilot (VS Code) hook mode")
 	cursor := flag.Bool("cursor", false, "Cursor hook mode")
 	gemini := flag.Bool("gemini", false, "Gemini CLI hook mode")
 	version := flag.Bool("version", false, "print version")
+	var chains chainFlags
+	flag.Var(&chains, "c", "chain command to execute after rewrite (repeatable)")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: rewriter [flags] [command...]\n\n")
 		fmt.Fprintf(os.Stderr, "Rewrite:\n")
@@ -25,7 +36,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  rewriter --claude               Claude Code hook mode\n")
 		fmt.Fprintf(os.Stderr, "  rewriter --copilot              GitHub Copilot hook mode\n")
 		fmt.Fprintf(os.Stderr, "  rewriter --cursor               Cursor hook mode\n")
-		fmt.Fprintf(os.Stderr, "  rewriter --gemini               Gemini CLI hook mode\n\n")
+		fmt.Fprintf(os.Stderr, "  rewriter --gemini               Gemini CLI hook mode\n")
+		fmt.Fprintf(os.Stderr, "  -c <command>                    chain hook command (repeatable)\n\n")
 		fmt.Fprintf(os.Stderr, "Setup:\n")
 		fmt.Fprintf(os.Stderr, "  rewriter init [-s scope] <name> install hook for an agent\n")
 		fmt.Fprintf(os.Stderr, "    names: %s\n", strings.Join(provider.Names(), ", "))
@@ -57,7 +69,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "error loading rules: %v\n", err)
 			os.Exit(1)
 		}
-		p.RunHook(rs)
+		p.RunHook(rs, chains)
 		return
 	}
 

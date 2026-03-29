@@ -21,7 +21,7 @@ func (c *Copilot) Scopes() ([]Scope, Scope) {
 // See: https://code.visualstudio.com/docs/copilot/customization/hooks
 // Input:  {"tool_name":"runTerminalCommand","tool_input":{"command":"..."}}
 // Output: {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"...","updatedInput":{"command":"..."}}}
-func (c *Copilot) RunHook(rs *rules.RuleSet) {
+func (c *Copilot) RunHook(rs *rules.RuleSet, chains []string) {
 	data := readStdin()
 
 	var input struct {
@@ -44,7 +44,20 @@ func (c *Copilot) RunHook(rs *rules.RuleSet) {
 		exitSilent()
 	}
 
-	rewritten, changed := tryRewrite(input.ToolInput.Command, rs)
+	command := input.ToolInput.Command
+	changed := false
+
+	if rewritten, ok := tryRewrite(command, rs); ok {
+		command = rewritten
+		changed = true
+	}
+
+	// Copilot uses the same JSON format as Claude for chain extraction
+	if chainCmd, ok := runChains(chains, data, command, claudeExtractCommand, claudeBuildInput); ok {
+		command = chainCmd
+		changed = true
+	}
+
 	if !changed {
 		exitSilent()
 	}
@@ -54,7 +67,7 @@ func (c *Copilot) RunHook(rs *rules.RuleSet) {
 			"hookEventName":           "PreToolUse",
 			"permissionDecision":       "allow",
 			"permissionDecisionReason": "rewriter auto-rewrite",
-			"updatedInput":             map[string]string{"command": rewritten},
+			"updatedInput":             map[string]string{"command": command},
 		},
 	})
 }
