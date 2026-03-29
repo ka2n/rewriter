@@ -1,4 +1,4 @@
-package parser
+package shellparse
 
 import (
 	"testing"
@@ -40,18 +40,18 @@ func TestParseCommand(t *testing.T) {
 			args:       []string{"push"},
 		},
 		{
-			input:     "git status 2>&1",
-			name:      "git",
+			input:      "git status 2>&1",
+			name:       "git",
 			subcommand: "status",
-			redirects: []string{"2>&1"},
-			args:      []string{"status"},
+			redirects:  []string{"2>&1"},
+			args:       []string{"status"},
 		},
 		{
-			input:     "echo hello > output.txt",
-			name:      "echo",
+			input:      "echo hello > output.txt",
+			name:       "echo",
 			subcommand: "hello",
-			redirects: []string{">", "output.txt"},
-			args:      []string{"hello"},
+			redirects:  []string{">", "output.txt"},
+			args:       []string{"hello"},
 		},
 		{
 			input:      "cat file.txt",
