@@ -56,6 +56,11 @@ func (g *Gemini) RunHook(rs *rules.RuleSet, chains []string) {
 		exitSilent()
 	}
 
+	// TODO: Check the ORIGINAL command against deny/ask permission rules before auto-allowing.
+	// Rewriting changes the command shape so agent-side deny rules won't match the original.
+	// Gemini's hook decision is authoritative — no built-in rule override.
+	// Only supports "allow" and "deny"/"block" — no "ask".
+	// Ref: https://github.com/rtk-ai/rtk/issues/260
 	writeJSON(map[string]any{
 		"decision": "allow",
 		"hookSpecificOutput": map[string]any{

@@ -62,6 +62,10 @@ func (c *Copilot) RunHook(rs *rules.RuleSet, chains []string) {
 		exitSilent()
 	}
 
+	// TODO: Check the ORIGINAL command against deny/ask permission rules before auto-allowing.
+	// Rewriting changes the command shape so agent-side deny rules won't match the original.
+	// Copilot uses same schema as Claude — unclear if built-in rules override hook "allow".
+	// Ref: https://github.com/rtk-ai/rtk/issues/260
 	writeJSON(map[string]any{
 		"hookSpecificOutput": map[string]any{
 			"hookEventName":           "PreToolUse",
