@@ -90,6 +90,15 @@ func (rs *RuleSet) Rules() []Rule {
 	return all
 }
 
+// Commands returns the set of command names that have rewrite rules.
+func (rs *RuleSet) Commands() []string {
+	cmds := make([]string, 0, len(rs.byCommand))
+	for cmd := range rs.byCommand {
+		cmds = append(cmds, cmd)
+	}
+	return cmds
+}
+
 func configPath() string {
 	dir := os.Getenv("XDG_CONFIG_HOME")
 	if dir == "" {
