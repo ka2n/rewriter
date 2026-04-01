@@ -39,7 +39,8 @@ func (c *Claude) RunHook(rs *rules.RuleSet, chains []string) {
 		exitSilent()
 	}
 
-	command := input.ToolInput.Command
+	originalCommand := input.ToolInput.Command
+	command := originalCommand
 	changed := false
 
 	if rewritten, ok := tryRewrite(command, rs); ok {
@@ -56,14 +57,31 @@ func (c *Claude) RunHook(rs *rules.RuleSet, chains []string) {
 		exitSilent()
 	}
 
-	writeJSON(map[string]any{
-		"hookSpecificOutput": map[string]any{
-			"hookEventName":           "PreToolUse",
-			"permissionDecision":       "allow",
-			"permissionDecisionReason": "rewriter auto-rewrite",
-			"updatedInput":             map[string]string{"command": command},
-		},
-	})
+	// Check the ORIGINAL command against deny/ask permission rules so that
+	// rewriting cannot bypass user-configured restrictions.
+	// Ref: https://github.com/rtk-ai/rtk/issues/260
+	switch claudeCheckPermission(originalCommand, rs) {
+	case claudePermissionDeny:
+		// Let Claude Code's native deny handle the original command.
+		exitSilent()
+	case claudePermissionAsk:
+		// Rewrite but omit permissionDecision so Claude Code prompts user.
+		writeJSON(map[string]any{
+			"hookSpecificOutput": map[string]any{
+				"hookEventName": "PreToolUse",
+				"updatedInput":  map[string]string{"command": command},
+			},
+		})
+	default:
+		writeJSON(map[string]any{
+			"hookSpecificOutput": map[string]any{
+				"hookEventName":           "PreToolUse",
+				"permissionDecision":       "allow",
+				"permissionDecisionReason": "rewriter auto-rewrite",
+				"updatedInput":             map[string]string{"command": command},
+			},
+		})
+	}
 }
 
 func claudeExtractCommand(output []byte) (string, bool) {
