@@ -99,6 +99,11 @@ func (rs *RuleSet) Commands() []string {
 	return cmds
 }
 
+// ConfigPath returns the path to the rules TOML config file.
+func ConfigPath() string {
+	return configPath()
+}
+
 func configPath() string {
 	dir := os.Getenv("XDG_CONFIG_HOME")
 	if dir == "" {

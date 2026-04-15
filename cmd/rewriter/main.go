@@ -31,6 +31,10 @@ func main() {
 	flag.Var(&chains, "c", "chain command to execute after rewrite (repeatable)")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: rewriter [flags] [command...]\n\n")
+		fmt.Fprintf(os.Stderr, "A pre-execution hook that rewrites shell commands before they run.\n")
+		fmt.Fprintf(os.Stderr, "When a command matches a rule, rewriter transparently replaces it\n")
+		fmt.Fprintf(os.Stderr, "(e.g. \"gws ...\" becomes \"aikit gws ...\"). Commands with no matching\n")
+		fmt.Fprintf(os.Stderr, "rule pass through unchanged. Rules are defined in rules.toml.\n\n")
 		fmt.Fprintf(os.Stderr, "Rewrite:\n")
 		fmt.Fprintf(os.Stderr, "  rewriter <command>              rewrite a command string\n")
 		fmt.Fprintf(os.Stderr, "  rewriter --claude               Claude Code hook mode\n")
@@ -42,7 +46,28 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  rewriter init [-s scope] <name> install hook for an agent\n")
 		fmt.Fprintf(os.Stderr, "    names: %s\n", strings.Join(provider.Names(), ", "))
 		fmt.Fprintf(os.Stderr, "    scopes: user, project, local\n\n")
-		fmt.Fprintf(os.Stderr, "  rewriter --version              print version\n")
+		fmt.Fprintf(os.Stderr, "  rewriter --version              print version\n\n")
+
+		// Show active rules
+		rs, err := rules.Load()
+		if err == nil {
+			all := rs.Rules()
+			if len(all) > 0 {
+				fmt.Fprintf(os.Stderr, "Active rules (%s):\n", rules.ConfigPath())
+				for _, r := range all {
+					lhs := r.Command
+					if r.Subcommand != "" {
+						lhs += " " + r.Subcommand
+					}
+					if r.Replace != "" {
+						fmt.Fprintf(os.Stderr, "  %s → %s\n", lhs, r.Replace)
+					}
+					if len(r.AppendFlags) > 0 {
+						fmt.Fprintf(os.Stderr, "  %s += %s\n", lhs, strings.Join(r.AppendFlags, " "))
+					}
+				}
+			}
+		}
 	}
 	flag.Parse()
 
